@@ -1,25 +1,21 @@
-const multer = require("multer");
-
-
+const multer = require('multer')
 
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        cb(null, "images");
+    destination: function (req, file, cb) {
+        cb(null, 'images')
     },
-    filename: function(req, file, cb) {
-        cb(null, file.originalname);
-    }
-});
-  
+    filename: function (req, file, cb) {
+        cb(null, new Date() + '-' + file.originalname)
+    },
+})
+
 const fileFilter = (req, file, cb) => {
-    if (
-        file.mimetype.startsWith("image")
-    ) {
-        return cb(null, true);
+    if (file.mimetype.startsWith('image')) {
+        return cb(null, true)
     }
-    return cb(null, false);
-};
+    return cb(null, false)
+}
 
-const uploadFile = multer({ storage: storage, fileFilter: fileFilter });
+const uploadFile = multer({ storage: storage, fileFilter: fileFilter })
 
-module.exports = uploadFile;
+module.exports = uploadFile

@@ -1,37 +1,38 @@
 const JWT = require('jsonwebtoken')
-const client = require("./redis")
+const client = require('./redis')
+const createError = require('http-errors')
+const { Result } = require('express-validator')
 
 module.exports = {
     signAccessToken: (userId) => {
         return new Promise((resolve, reject) => {
-            const secret = process.env.JWT_SECRET_KEY
             const options = {
-              id: userId,
-          }
-            JWT.sign( options, secret, {expiresIn: '600s'}, (err, token) => {
-                if (err) {
-                    console.log(err.message)
-                    reject(err)
-                }
-                client.SET(userId, token, "EX", 365 * 24 * 60 * 60, (err, reply) => {
-                    if(err) {
+                id: userId,
+            }
+            JWT.sign(
+                options,
+                process.env.JWT_SECRET_KEY,
+                { expiresIn: '600s' },
+                (err, token) => {
+                    if (err) {
                         console.log(err.message)
-                        reject(err)
-                        return;
+                        reject(createError.InternalServerError())
+                        return
                     }
                     resolve(token)
-                })
-            })
+                }
+            )
         })
     },
     verifyAccessToken: (token) => {
         return new Promise((resolve, reject) => {
             JWT.verify(token, process.env.JWT_SECRET_KEY, (err, payload) => {
                 if (err) {
-                    reject(err)
-                    return;
+                    console.log(err.message)
+                    reject(createError.Unauthorized())
+                    return
                 }
-                resolve(payload);
+                resolve(payload)
             })
         })
     },
@@ -41,23 +42,57 @@ module.exports = {
                 refreshToken,
                 process.env.REFRESH_TOKEN_SECRET,
                 (err, payload) => {
-                    if (err) return reject(err)
-                    resolve(payload)
+                    if (err) {
+                        console.log(err.message)
+                        reject(createError.Unauthorized())
+                        return
+                    }
+                    client.GET(payload.id, (err, result) => {
+                        if (err) {
+                            console.log(err.message)
+                            reject(createError.InternalServerError())
+                            return
+                        }
+                        if (refreshToken === result) {
+                            resolve(payload)
+                        }
+                        reject(createError.Unauthorized())
+                        return
+                    })
                 }
             )
         })
     },
-    signRefreshToken: ( id ) => {
+    signRefreshToken: (id) => {
         return new Promise((resolve, reject) => {
-            const secret = process.env.REFRESH_TOKEN_SECRET;
-
-            JWT.sign({id}, secret, {
-                expiresIn: "1y"
-            }, (err, token) => {
-                if(err) reject(err)
-                resolve(token)
-            })
+            JWT.sign(
+                { id },
+                process.env.REFRESH_TOKEN_SECRET,
+                {
+                    expiresIn: '1y',
+                },
+                (err, token) => {
+                    if (err) {
+                        console.log(err.message)
+                        reject(createError.Unauthorized())
+                        return
+                    }
+                    client.SET(
+                        id,
+                        token,
+                        'EX',
+                        365 * 24 * 60 * 60,
+                        (err, reply) => {
+                            if (err) {
+                                console.log(err.message)
+                                reject(createError.InternalServerError())
+                                return
+                            }
+                        }
+                    )
+                    resolve(token)
+                }
+            )
         })
-        
-    }
+    },
 }
