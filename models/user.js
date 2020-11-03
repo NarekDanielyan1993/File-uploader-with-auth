@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs')
 const { password } = require('../config/config')
+const createError = require('http-errors')
 require('dotenv').config()
 
 module.exports = (sequelize, DataTypes) => {
@@ -47,14 +48,14 @@ module.exports = (sequelize, DataTypes) => {
         bcrypt.genSalt(+process.env.SALT_LENGTH, function (err, salt) {
             if (err) {
                 console.log(err.message)
-                throw createError.InternalServerError()
+                Promise.reject(createError.InternalServerError())
             }
-            bcrypt.hash(password, salt, function (err, hash) {
+            bcrypt.hash(user.password, salt, function (err, hash) {
                 if (err) {
                     console.log(err)
-                    throw createError.InternalServerError()
+                    Promise.reject(createError.InternalServerError())
                 }
-                user.password = password
+                user.password = hash
             })
         })
     })
