@@ -36,7 +36,7 @@ router.post(
     '/signin',
     oneOf(
         [
-            check('emailOrPhoneNumber').exists().normalizeEmail().isEmail(),
+            check('emailOrPhoneNumber').exists().isEmail(),
             check('emailOrPhoneNumber').custom((value) => {
                 if (!isMobilePhoneNumber(value)) {
                     throw new Error()

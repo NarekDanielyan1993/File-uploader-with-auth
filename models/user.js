@@ -1,3 +1,7 @@
+const bcrypt = require('bcryptjs')
+const { password } = require('../config/config')
+require('dotenv').config()
+
 module.exports = (sequelize, DataTypes) => {
     const User = sequelize.define(
         'User',
@@ -38,6 +42,26 @@ module.exports = (sequelize, DataTypes) => {
             },
         }
     )
+
+    User.beforeCreate(async (user) => {
+        bcrypt.genSalt(+process.env.SALT_LENGTH, function (err, salt) {
+            if (err) {
+                console.log(err.message)
+                throw createError.InternalServerError()
+            }
+            bcrypt.hash(password, salt, function (err, hash) {
+                if (err) {
+                    console.log(err)
+                    throw createError.InternalServerError()
+                }
+                user.password = password
+            })
+        })
+    })
+
+    User.prototype.validatePassword = async function (password) {
+        return await bcrypt.compare(password, this.password)
+    }
 
     return User
 }

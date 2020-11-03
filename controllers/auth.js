@@ -1,5 +1,4 @@
 const { validationResult } = require('express-validator')
-const bcrypt = require('bcryptjs')
 const createError = require('http-errors')
 const dotenv = require('dotenv')
 dotenv.config()
@@ -22,6 +21,7 @@ exports.signup = (req, res, next) => {
         return next(error)
     }
     const emailOrPhoneNumber = req.body.emailOrPhoneNumber
+    const password = req.body.password
     User.findOne({ where: { emailOrPhoneNumber } })
         .then((user) => {
             if (user) {
@@ -33,31 +33,18 @@ exports.signup = (req, res, next) => {
             }
         })
         .catch((err) => next(err))
-    const password = req.body.password
-    bcrypt.genSalt(+process.env.SALT_LENGTH, function (err, salt) {
-        if (err) {
-            console.log(err.message)
-            return next(createError.InternalServerError())
-        }
-        bcrypt.hash(password, salt, function (err, hash) {
-            if (err) {
-                console.log(err)
-                return next(createError.InternalServerError())
-            }
-            User.create({
-                emailOrPhoneNumber,
-                password: hash,
-            })
-                .then((user) => {
-                    if (!user) throw createError.InternalServerError()
-                    res.status(200).json({
-                        message: 'You Successfully signup',
-                        data: user.id,
-                    })
-                })
-                .catch((err) => next(err))
-        })
+    User.create({
+        emailOrPhoneNumber,
+        password,
     })
+        .then((user) => {
+            if (!user) throw createError.InternalServerError()
+            res.status(200).json({
+                message: 'You Successfully signup',
+                data: user.id,
+            })
+        })
+        .catch((err) => next(err))
 }
 
 exports.login = async (req, res, next) => {
@@ -77,7 +64,7 @@ exports.login = async (req, res, next) => {
     if (!user) {
         next(createError.BadRequest('User not found'))
     }
-    const isPasswordMatch = await bcrypt.compare(password, user.password)
+    const isPasswordMatch = user.validatePassword(password)
     if (!isPasswordMatch) {
         next(createError.BadRequest('Password does not correct'))
     }
