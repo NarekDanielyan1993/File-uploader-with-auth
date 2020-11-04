@@ -44,7 +44,7 @@ module.exports = (sequelize, DataTypes) => {
         }
     )
 
-    User.beforeCreate(async (user) => {
+    User.beforeCreate((user) => {
         bcrypt.genSalt(+process.env.SALT_LENGTH, function (err, salt) {
             if (err) {
                 console.log(err.message)
@@ -52,10 +52,11 @@ module.exports = (sequelize, DataTypes) => {
             }
             bcrypt.hash(user.password, salt, function (err, hash) {
                 if (err) {
-                    console.log(err)
+                    console.log(err.message)
                     Promise.reject(createError.InternalServerError())
                 }
                 user.password = hash
+                user.save()
             })
         })
     })
